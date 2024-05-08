@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { CreateProfileDto } from "./dto/create-profile.dto"
+import { CreateProfileInput } from "./dto/create-profile.input"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import { Profile } from "./entities/profile.entity"
@@ -11,7 +11,7 @@ export class ProfilesService {
         private profilesRepository: Repository<Profile>,
     ) {}
 
-    async create(createProfileDto: CreateProfileDto) {
-        return this.profilesRepository.create(createProfileDto)
+    async create(createProfileInput: CreateProfileInput) {
+        return this.profilesRepository.create(createProfileInput)
     }
 }

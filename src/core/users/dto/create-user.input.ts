@@ -1,12 +1,15 @@
+import { Field, InputType } from "@nestjs/graphql"
 import { ApiProperty } from "@nestjs/swagger"
 
-export class UserDto {
+@InputType()
+export class CreateUserInput {
     @ApiProperty({
         example: "user",
         description: "Логин",
         type: [String],
         required: true,
     })
+    @Field()
     readonly login: string
 
     @ApiProperty({
@@ -15,5 +18,6 @@ export class UserDto {
         type: [String],
         required: false,
     })
+    @Field()
     readonly password: string
 }

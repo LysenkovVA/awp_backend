@@ -1,3 +1,4 @@
+import { Field, ID, ObjectType } from "@nestjs/graphql"
 import {
     BeforeInsert,
     Column,
@@ -7,26 +8,32 @@ import {
     OneToOne,
     PrimaryGeneratedColumn,
 } from "typeorm"
-import { Token } from "../../tokens/entities/token.entity"
-import { Profile } from "../../profiles/entities/profile.entity"
 import * as bcrypt from "bcryptjs"
+import { Profile } from "../../profiles/entities/profile.entity"
+import { Token } from "../../tokens/entities/token.entity"
 
 @Entity()
+@ObjectType()
 export class User {
     @PrimaryGeneratedColumn("uuid")
+    @Field(() => ID)
     id: string
 
     @Column()
+    @Field()
     login: string
 
     @Column()
+    @Field()
     password: string
 
-    @OneToOne(() => Profile)
+    @OneToOne(() => Profile, { onDelete: "CASCADE" })
     @JoinColumn()
+    @Field(() => Profile)
     profile: Promise<Profile>
 
-    @OneToMany(() => Token, (token) => token.user)
+    @OneToMany(() => Token, (token) => token.user, { onDelete: "CASCADE" })
+    @Field(() => [Token], { nullable: "itemsAndList" })
     tokens: Promise<Token[]>
 
     @BeforeInsert()

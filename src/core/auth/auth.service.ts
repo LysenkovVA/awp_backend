@@ -4,16 +4,16 @@ import {
     InternalServerErrorException,
     UnauthorizedException,
 } from "@nestjs/common"
-import { SignInDto } from "./dto/sign-in.dto"
+import { User } from "../users/entities/user.entity"
+import * as bcrypt from "bcryptjs"
+import { DataSource, EntityManager } from "typeorm"
 import { JwtService } from "@nestjs/jwt"
-import { SignUpDto } from "./dto/sign-up.dto"
 import { ConfigService } from "@nestjs/config"
 import { UsersService } from "../users/users.service"
-import { DataSource, EntityManager } from "typeorm"
-import { User } from "../users/entities/user.entity"
 import { TokensService } from "../tokens/tokens.service"
 import { ProfilesService } from "../profiles/profiles.service"
-import * as bcrypt from "bcryptjs"
+import { SignUpInput } from "./dto/sign-up.input"
+import { SignInInput } from "./dto/sign-in.dto"
 
 @Injectable()
 export class AuthService {
@@ -28,14 +28,14 @@ export class AuthService {
 
     /**
      * Регистрация пользователя
-     * @param signUpDto
+     * @param signUpInput
      */
-    async signUp(signUpDto: SignUpDto) {
-        const candidate = await this.usersService.findByLogin(signUpDto.login)
+    async signUp(signUpInput: SignUpInput) {
+        const candidate = await this.usersService.findByLogin(signUpInput.login)
 
         if (candidate) {
             throw new BadRequestException({
-                message: `Пользователь с логином '${signUpDto.login}' уже зарегистрирован!`,
+                message: `Пользователь с логином '${signUpInput.login}' уже зарегистрирован!`,
             })
         }
 
@@ -43,11 +43,14 @@ export class AuthService {
         return await this.dataSource.transaction(
             async (entityManager: EntityManager) => {
                 const user = await this.usersService.create({
-                    login: signUpDto.login,
-                    password: signUpDto.password,
+                    login: signUpInput.login,
+                    password: signUpInput.password,
                 })
 
-                const profile = await this.profilesService.create({})
+                const profile = await this.profilesService.create({
+                    firstName: null,
+                    lastName: null,
+                })
                 await entityManager.save(profile)
 
                 // Генерируем токены
@@ -55,7 +58,10 @@ export class AuthService {
                 const refreshToken = await this.generateRefreshToken(user)
 
                 // Создаем токен
-                const token = await this.tokenService.create({ refreshToken })
+                const token = await this.tokenService.create({
+                    fingerPrint: null,
+                    refreshToken,
+                })
                 await entityManager.save(token)
 
                 // Связываем профиль и токен с пользователем
@@ -78,27 +84,27 @@ export class AuthService {
 
     /**
      * Авторизация пользователя
-     * @param signInDto
+     * @param signInInput
      */
-    async signIn(signInDto: SignInDto) {
+    async signIn(signInInput: SignInInput) {
         // Транзакция
         return await this.dataSource.transaction(
             async (entityManager: EntityManager) => {
                 // Ищем пользователя и проверяем правильность пароля
                 const user = await this.usersService.findByLogin(
-                    signInDto.login,
+                    signInInput.login,
                 )
 
                 if (!user) {
                     throw new BadRequestException({
-                        message: `Пользователь '${signInDto.login}' не существует!`,
+                        message: `Пользователь '${signInInput.login}' не существует!`,
                     })
                 }
 
                 // Здесь await нужен, иначе не срабатывает!
                 // .then нужен чтобы среда не подсвечивала синтаксис
                 const passwordEquals = await bcrypt
-                    .compare(signInDto.password, user.password)
+                    .compare(signInInput.password, user.password)
                     .then((resolve) => resolve)
 
                 if (!passwordEquals) {
@@ -113,14 +119,22 @@ export class AuthService {
 
                 // Удаляем ВСЕ старые токены
                 const tokens = await user.tokens
-                await this.tokenService.remove(tokens)
+
+                if (tokens) {
+                    const res = await this.tokenService.remove(tokens)
+                }
 
                 // Создаем токен
-                const token = await this.tokenService.create({ refreshToken })
-                await entityManager.save(token)
+                const token = await this.tokenService.create({
+                    fingerPrint: null,
+                    refreshToken,
+                })
+
+                await entityManager.save(token, { reload: true })
 
                 // Связываем токен с пользователем
                 user.tokens = Promise.resolve([token])
+
                 await entityManager.save(user)
 
                 return {
@@ -141,9 +155,10 @@ export class AuthService {
 
         if (token) {
             await this.tokenService.remove([token])
+            return true
         }
 
-        return true
+        return false
     }
 
     /**

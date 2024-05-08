@@ -1,0 +1,71 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Auth {
+  accessToken: String
+  refreshToken: String
+  user: User
+}
+
+input CreateProfileInput {
+  firstName: String
+  lastName: String
+}
+
+input CreateTokenInput {
+  fingerPrint: String
+  refreshToken: String!
+}
+
+input CreateUserInput {
+  login: String!
+  password: String!
+}
+
+type Mutation {
+  createProfile(createProfileInput: CreateProfileInput!): Profile!
+  createToken(createTokenInput: CreateTokenInput!): Token!
+  createUser(createUserInput: CreateUserInput!): User!
+  logout(refreshToken: String!): Auth!
+  refreshAccessToken(refreshToken: String!): Auth!
+  removeTokenById(id: String!): Token!
+  signIn(signInInput: SignInInput!): Auth!
+  signUp(signUpInput: SignUpInput!): Auth!
+}
+
+type Profile {
+  firstName: String
+  id: ID!
+  lastName: String
+}
+
+type Query {
+  findAllUsers: [User!]!
+  findByLogin(createUserInput: CreateUserInput!): User!
+}
+
+input SignInInput {
+  login: String!
+  password: String!
+}
+
+input SignUpInput {
+  login: String!
+  password: String!
+}
+
+type Token {
+  fingerPrint: String
+  id: ID!
+  refreshToken: String!
+  user: User!
+}
+
+type User {
+  id: ID!
+  login: String!
+  password: String!
+  profile: Profile!
+  tokens: [Token]
+}

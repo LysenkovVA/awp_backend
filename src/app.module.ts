@@ -1,13 +1,15 @@
 import { Module } from "@nestjs/common"
 import { TypeOrmModule } from "@nestjs/typeorm"
 import { ConfigModule } from "@nestjs/config"
-import { AuthModule } from "./core/auth/auth.module"
-import { UsersModule } from "./core/users/users.module"
-import { TokensModule } from "./core/tokens/tokens.module"
 import process from "process"
 import { JwtModule } from "@nestjs/jwt"
 import { join } from "path"
-import { ProfilesModule } from './core/profiles/profiles.module';
+import { GraphQLModule } from "@nestjs/graphql"
+import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo"
+import { UsersModule } from "./core/users/users.module"
+import { ProfilesModule } from "./core/profiles/profiles.module"
+import { TokensModule } from "./core/tokens/tokens.module"
+import { AuthModule } from "./core/auth/auth.module"
 
 @Module({
     imports: [
@@ -16,6 +18,12 @@ import { ProfilesModule } from './core/profiles/profiles.module';
             envFilePath: `.${process.env.NODE_ENV}.env`,
             cache: true,
             isGlobal: true,
+        }),
+        GraphQLModule.forRoot<ApolloDriverConfig>({
+            driver: ApolloDriver,
+            // Code-first graphQL
+            autoSchemaFile: join(__dirname, "/../src/core/schema.gql"),
+            sortSchema: true,
         }),
         TypeOrmModule.forRoot({
             type: "postgres",
@@ -28,12 +36,13 @@ import { ProfilesModule } from './core/profiles/profiles.module';
             database: process.env.DATABASE_NAME,
             entities: [join(__dirname, "/core/**/**.entity{.ts,.js}")],
             synchronize: true,
+            logging: true,
         }),
         JwtModule,
-        AuthModule,
         UsersModule,
-        TokensModule,
         ProfilesModule,
+        TokensModule,
+        AuthModule,
     ],
     controllers: [],
     providers: [],
